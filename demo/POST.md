@@ -3,6 +3,16 @@
 **Video:** `demo/rss-readers-4k.mp4` — 3840×2160, H.264/yuv420p, ~21s, `+faststart`.
 Twitter/X-ready (drag-and-drop). Regenerate with `./demo/render-4k.sh`.
 
+## Short post (ready to go)
+
+> Built a terminal RSS reader in Go + Charm Bubble Tea.
+>
+> Concurrent fetch, three-tier cache (warm start ~4ms vs 1.3s cold), OPML in/out, feed sidebar, fuzzy search. Config you own.
+>
+> MIT → github.com/shubhxho/rss-readers
+>
+> #golang #charmcli
+
 ## Tweet copy
 
 ### Option A — build-in-public
