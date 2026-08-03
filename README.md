@@ -6,6 +6,11 @@ a config you actually own.
 
 ![status](https://img.shields.io/badge/go-1.26-00ADD8) ![tui](https://img.shields.io/badge/tui-bubbletea-ff79c6)
 
+![demo](docs/demo.gif)
+
+> Recorded with [VHS](https://github.com/charmbracelet/vhs) — regenerate with
+> `vhs demo/demo.tape` (from the repo root).
+
 ## Features
 
 - **Dedicated fetching page** — a live progress bar, spinner, and a per-feed log
