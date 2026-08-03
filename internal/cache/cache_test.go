@@ -50,6 +50,35 @@ func TestFreshness(t *testing.T) {
 	}
 }
 
+func TestTouchSlidesFreshness(t *testing.T) {
+	c := tempCache(t)
+	url := "https://example.com/feed"
+	_ = c.Put(&Entry{URL: url, Body: []byte("x")})
+
+	// Age the entry, then Touch and confirm it is fresh again.
+	e, _ := c.Get(url)
+	e.FetchedAt = time.Now().Add(-time.Hour)
+	_ = c.Put(e)
+
+	c.Touch(url)
+	got, ok := c.Get(url)
+	if !ok || !got.Fresh(time.Minute) {
+		t.Fatalf("Touch should refresh FetchedAt: fresh=%v", got.Fresh(time.Minute))
+	}
+}
+
+func TestTouchMissingIsNoop(t *testing.T) {
+	c := tempCache(t)
+	c.Touch("https://nope.example/feed") // must not panic
+}
+
+func TestGetMiss(t *testing.T) {
+	c := tempCache(t)
+	if _, ok := c.Get("https://absent.example/feed"); ok {
+		t.Fatal("missing url should report not found")
+	}
+}
+
 func TestBlobRoundTrip(t *testing.T) {
 	c := tempCache(t)
 	url := "https://example.com/feed"

@@ -1,6 +1,7 @@
 package opml
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/shubhxho/rss-readers/internal/config"
@@ -36,6 +37,39 @@ func TestParseFlattensAndInheritsCategory(t *testing.T) {
 	}
 	if byName["Hacker News"].URL != "https://hnrss.org/frontpage" {
 		t.Fatalf("wrong url: %q", byName["Hacker News"].URL)
+	}
+}
+
+func TestParseEmptyBody(t *testing.T) {
+	feeds, err := Parse([]byte(`<opml version="2.0"><head/><body/></opml>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(feeds) != 0 {
+		t.Fatalf("empty body should yield no feeds, got %d", len(feeds))
+	}
+}
+
+func TestParseInvalidXML(t *testing.T) {
+	if _, err := Parse([]byte("not xml <<<")); err == nil {
+		t.Fatal("invalid XML should return an error")
+	}
+}
+
+func TestMarshalUncategorized(t *testing.T) {
+	data, err := Marshal("subs", []config.Feed{{Name: "X", URL: "https://x.com/f"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "Uncategorized") {
+		t.Fatalf("feeds without a category should land in Uncategorized:\n%s", data)
+	}
+	out, err := Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 1 || out[0].URL != "https://x.com/f" {
+		t.Fatalf("round-trip failed: %+v", out)
 	}
 }
 
