@@ -1,0 +1,29 @@
+package tui
+
+import "github.com/charmbracelet/bubbles/key"
+
+type keyMap struct {
+	Up       key.Binding
+	Down     key.Binding
+	Open     key.Binding
+	Read     key.Binding
+	Back     key.Binding
+	Refresh  key.Binding
+	NextFeed key.Binding
+	PrevFeed key.Binding
+	Help     key.Binding
+	Quit     key.Binding
+}
+
+var keys = keyMap{
+	Up:       key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
+	Down:     key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
+	Read:     key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "read")),
+	Open:     key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "open in browser")),
+	Back:     key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
+	Refresh:  key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "refresh")),
+	NextFeed: key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next feed")),
+	PrevFeed: key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "prev feed")),
+	Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
+	Quit:     key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
+}
