@@ -76,14 +76,18 @@ type model struct {
 	vp      viewport.Model
 
 	width, height int
+	sidebarW      int
 
 	results   []feed.Result
 	fetchLog  []feed.Result // completed feeds in finish order, for the fetch page
 	done, tot int
 
-	allItems   []feed.Item // every merged item, for cheap re-filtering
-	feedNames  []string    // unique feed names, for the tab filter
-	feedFilter int         // active feed filter index into feedNames; -1 == all
+	allItems   []feed.Item            // every merged item, newest-first
+	allRows    []list.Item            // prebuilt list rows for "all feeds"
+	byFeed     map[string][]list.Item // feed name -> prebuilt rows (O(1) filter)
+	feedCount  map[string]int         // feed name -> item count, for the sidebar
+	feedNames  []string               // unique feed names, for the tab filter
+	feedFilter int                    // active feed filter index; -1 == all
 
 	current  feed.Item // article being read
 	err      error
@@ -115,13 +119,13 @@ func New(cfg *config.Config, c *cache.Cache) model {
 	l.StatusMessageLifetime = 3 * time.Second
 
 	return model{
-		cfg:     cfg,
-		fetcher: feed.New(c, time.Duration(cfg.CacheTTLMinutes)*time.Minute),
-		pipe:    &fetchPipe{events: make(chan tea.Msg, len(cfg.Feeds)+4)},
-		state:   stateFetching,
-		styles:  st,
-		spinner: sp,
-		prog:    pr,
+		cfg:        cfg,
+		fetcher:    feed.New(c, time.Duration(cfg.CacheTTLMinutes)*time.Minute),
+		pipe:       &fetchPipe{events: make(chan tea.Msg, len(cfg.Feeds)+4)},
+		state:      stateFetching,
+		styles:     st,
+		spinner:    sp,
+		prog:       pr,
 		list:       l,
 		tot:        len(cfg.Feeds),
 		feedFilter: -1,
@@ -316,8 +320,13 @@ func (m *model) layout() {
 	h := m.width - 2
 	inner := m.height - 4
 
+	// Reserve a feed sidebar on wide terminals; collapse it when cramped.
+	m.sidebarW = 0
+	if m.width >= 84 {
+		m.sidebarW = 24
+	}
 	m.prog.Width = min(60, h)
-	m.list.SetSize(h, m.height-2)
+	m.list.SetSize(h-m.sidebarW, m.height-2)
 
 	if !m.ready {
 		m.vp = viewport.New(h, inner)
@@ -331,21 +340,25 @@ func (m *model) layout() {
 	}
 }
 
+// rebuildList precomputes every derived view once — the flat "all" rows and a
+// per-feed row index — so switching filters later is an O(1) map lookup rather
+// than a rescan of the full item set.
 func (m *model) rebuildList() {
 	m.allItems = feed.Merge(m.results)
 
-	// Collect feed names that actually returned items, in stable order.
-	names := make([]string, 0, len(m.results))
-	seen := map[string]struct{}{}
-	for _, r := range m.results {
-		if len(r.Items) == 0 {
-			continue
-		}
-		if _, dup := seen[r.Feed.Name]; dup {
-			continue
-		}
-		seen[r.Feed.Name] = struct{}{}
-		names = append(names, r.Feed.Name)
+	m.allRows = make([]list.Item, 0, len(m.allItems))
+	m.byFeed = make(map[string][]list.Item, len(m.results))
+	m.feedCount = make(map[string]int, len(m.results))
+	for _, it := range m.allItems {
+		row := listItem{it: it}
+		m.allRows = append(m.allRows, row)
+		m.byFeed[it.FeedName] = append(m.byFeed[it.FeedName], row)
+		m.feedCount[it.FeedName]++
+	}
+
+	names := make([]string, 0, len(m.byFeed))
+	for name := range m.byFeed {
+		names = append(names, name)
 	}
 	sort.Strings(names)
 	m.feedNames = names
@@ -368,23 +381,16 @@ func (m *model) rebuildList() {
 	m.list.NewStatusMessage(fmt.Sprintf("%d fetched · %d cached · %d failed", ok, cached, failed))
 }
 
-// applyFeedFilter repopulates the list from allItems honoring feedFilter, and
-// updates the title to reflect the active scope.
+// applyFeedFilter swaps in the prebuilt rows for the active scope. No scanning.
 func (m *model) applyFeedFilter() {
+	var rows []list.Item
 	var scope string
-	rows := make([]list.Item, 0, len(m.allItems))
 	if m.feedFilter < 0 || m.feedFilter >= len(m.feedNames) {
-		for _, it := range m.allItems {
-			rows = append(rows, listItem{it: it})
-		}
+		rows = m.allRows
 		scope = fmt.Sprintf("All · %d feeds", len(m.feedNames))
 	} else {
 		name := m.feedNames[m.feedFilter]
-		for _, it := range m.allItems {
-			if it.FeedName == name {
-				rows = append(rows, listItem{it: it})
-			}
-		}
+		rows = m.byFeed[name]
 		scope = fmt.Sprintf("%s [%d/%d]", name, m.feedFilter+1, len(m.feedNames))
 	}
 	m.list.SetItems(rows)

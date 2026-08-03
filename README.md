@@ -13,12 +13,17 @@ a config you actually own.
 - **Concurrent fetching** — every feed is pulled in parallel with
   `golang.org/x/sync/errgroup`, bounded by a configurable semaphore. One slow or
   broken feed never blocks the rest.
-- **Two-tier caching** — a hot in-memory `sync.Map` layer over a persistent disk
-  layer, with HTTP conditional revalidation (`ETag` / `If-Modified-Since`). Fresh
-  feeds skip the network entirely; unchanged feeds cost a cheap `304`. Network
-  failures gracefully fall back to stale cache.
-- **Aggregated reading** — all articles merged and sorted newest-first, fuzzy
-  filtering (`/`), a scrollable reader view, and `o` to open in your browser.
+- **Three-tier caching** — a hot in-memory `sync.Map` over a persistent disk
+  layer, with HTTP conditional revalidation (`ETag` / `If-Modified-Since`), plus
+  a **parsed-item cache**: parsed articles are stored as JSON so a warm start
+  skips XML parsing *and* the network — launching against a warm cache is ~4ms
+  versus a ~1.3s cold fetch. Network failures fall back to stale cache.
+- **Feed sidebar** — every feed with a live item count, active filter
+  highlighted; `tab` cycles feeds via precomputed O(1) indexes. Collapses on
+  narrow terminals.
+- **Aggregated reading** — all articles merged newest-first, fuzzy search (`/`),
+  a scrollable reader, and `o` to open in your browser.
+- **OPML** — import from a file *or* URL, export grouped by category.
 - **Config you own** — a plain TOML file at `~/.config/rss-readers/config.toml`.
 
 ## Install
@@ -92,8 +97,24 @@ category = "Tech"
 
 ```
 main.go                    entrypoint + CLI
-internal/config            TOML config load/save, defaults
-internal/cache             two-tier ETag/Last-Modified cache
+internal/config            TOML config load/save, normalize, defaults
+internal/cache             three-tier cache (mem / body+validators / parsed items)
 internal/feed              concurrent fetch + gofeed parse
-internal/tui               Bubble Tea model, views, styles
+internal/opml              OPML 2.0 import/export
+internal/tui               Bubble Tea model, views, styles, sidebar
+```
+
+## Docs
+
+- [Configuration](docs/CONFIGURATION.md) — every key, normalization rules, caching.
+- [OPML](docs/OPML.md) — import/export, folders, examples.
+- [Changelog](CHANGELOG.md)
+
+## Development
+
+```sh
+make build      # build the binary
+make run        # run from source
+go test ./...   # config, cache, feed, opml, htmltext
+go vet ./...
 ```

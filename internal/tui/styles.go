@@ -4,38 +4,44 @@ import "github.com/charmbracelet/lipgloss"
 
 // Palette — a warm charm-flavored scheme that reads well on dark terminals.
 var (
-	colBg      = lipgloss.Color("#1a1b26")
-	colSubtle  = lipgloss.Color("#565f89")
-	colText    = lipgloss.Color("#c0caf5")
-	colMuted   = lipgloss.Color("#787c99")
-	colPink    = lipgloss.Color("#ff79c6")
-	colPurple  = lipgloss.Color("#bb9af7")
-	colCyan    = lipgloss.Color("#7dcfff")
-	colGreen   = lipgloss.Color("#9ece6a")
-	colYellow  = lipgloss.Color("#e0af68")
-	colRed     = lipgloss.Color("#f7768e")
-	colBlue    = lipgloss.Color("#7aa2f7")
+	colBg     = lipgloss.Color("#1a1b26")
+	colSubtle = lipgloss.Color("#565f89")
+	colText   = lipgloss.Color("#c0caf5")
+	colMuted  = lipgloss.Color("#787c99")
+	colPink   = lipgloss.Color("#ff79c6")
+	colPurple = lipgloss.Color("#bb9af7")
+	colCyan   = lipgloss.Color("#7dcfff")
+	colGreen  = lipgloss.Color("#9ece6a")
+	colYellow = lipgloss.Color("#e0af68")
+	colRed    = lipgloss.Color("#f7768e")
+	colBlue   = lipgloss.Color("#7aa2f7")
 )
 
 type styles struct {
-	app        lipgloss.Style
-	title      lipgloss.Style
-	titleBar   lipgloss.Style
-	statusBar  lipgloss.Style
-	statusKey  lipgloss.Style
-	spinner    lipgloss.Style
-	fetchBox   lipgloss.Style
-	fetchLine  lipgloss.Style
-	ok         lipgloss.Style
-	fail       lipgloss.Style
-	cache      lipgloss.Style
-	dim        lipgloss.Style
-	category   lipgloss.Style
-	readTitle  lipgloss.Style
-	readMeta   lipgloss.Style
-	readBody   lipgloss.Style
-	help       lipgloss.Style
-	scrollPct  lipgloss.Style
+	app       lipgloss.Style
+	title     lipgloss.Style
+	titleBar  lipgloss.Style
+	statusBar lipgloss.Style
+	statusKey lipgloss.Style
+	spinner   lipgloss.Style
+	fetchBox  lipgloss.Style
+	fetchLine lipgloss.Style
+	ok        lipgloss.Style
+	fail      lipgloss.Style
+	cache     lipgloss.Style
+	dim       lipgloss.Style
+	category  lipgloss.Style
+	readTitle lipgloss.Style
+	readMeta  lipgloss.Style
+	readBody  lipgloss.Style
+	help      lipgloss.Style
+	scrollPct lipgloss.Style
+
+	sidebar       lipgloss.Style
+	sidebarTitle  lipgloss.Style
+	sidebarItem   lipgloss.Style
+	sidebarActive lipgloss.Style
+	sidebarCount  lipgloss.Style
 }
 
 func newStyles() styles {
@@ -65,5 +71,15 @@ func newStyles() styles {
 		readBody:  lipgloss.NewStyle().Foreground(colText),
 		help:      lipgloss.NewStyle().Foreground(colSubtle),
 		scrollPct: lipgloss.NewStyle().Foreground(colMuted),
+
+		sidebar: lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder(), false, true, false, false).
+			BorderForeground(colSubtle).
+			Padding(0, 1),
+		sidebarTitle: lipgloss.NewStyle().
+			Foreground(colPurple).Bold(true).Padding(0, 0, 1, 0),
+		sidebarItem:   lipgloss.NewStyle().Foreground(colText),
+		sidebarActive: lipgloss.NewStyle().Foreground(colBg).Background(colPink).Bold(true),
+		sidebarCount:  lipgloss.NewStyle().Foreground(colMuted),
 	}
 }

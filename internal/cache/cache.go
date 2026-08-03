@@ -74,6 +74,31 @@ func key(url string) string {
 
 func (c *Cache) bodyPath(url string) string { return filepath.Join(c.dir, key(url)+".body") }
 func (c *Cache) metaPath(url string) string { return filepath.Join(c.dir, key(url)+".meta") }
+func (c *Cache) blobPath(url, kind string) string {
+	return filepath.Join(c.dir, key(url)+"."+kind)
+}
+
+// GetBlob returns an arbitrary named blob associated with url (e.g. the parsed
+// feed items), consulting the in-memory layer first. This lets callers cache
+// expensive post-processing — such as XML parsing — not just the raw body.
+func (c *Cache) GetBlob(url, kind string) ([]byte, bool) {
+	mk := kind + "|" + url
+	if v, ok := c.mem.Load(mk); ok {
+		return v.([]byte), true
+	}
+	data, err := os.ReadFile(c.blobPath(url, kind))
+	if err != nil {
+		return nil, false
+	}
+	c.mem.Store(mk, data)
+	return data, true
+}
+
+// PutBlob stores a named blob in both cache tiers.
+func (c *Cache) PutBlob(url, kind string, data []byte) error {
+	c.mem.Store(kind+"|"+url, data)
+	return atomicWrite(c.blobPath(url, kind), data)
+}
 
 // Get returns a cached entry, consulting the in-memory layer first and falling
 // back to disk. The returned bool is false when nothing is cached.

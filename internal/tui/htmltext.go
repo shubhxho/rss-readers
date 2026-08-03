@@ -8,7 +8,7 @@ import (
 
 var (
 	reTag      = regexp.MustCompile(`(?s)<[^>]*>`)
-	reBlock    = regexp.MustCompile(`(?i)</(p|div|br|li|h[1-6]|tr)\s*>`)
+	reBlock    = regexp.MustCompile(`(?i)</(p|div|br|h[1-6]|tr)\s*>`)
 	reBR       = regexp.MustCompile(`(?i)<br\s*/?>`)
 	reListItem = regexp.MustCompile(`(?i)<li[^>]*>`)
 	reSpaces   = regexp.MustCompile(`[ \t]{2,}`)

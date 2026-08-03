@@ -135,17 +135,54 @@ func (m model) listView() string {
 		kv("?", "help"),
 		kv("q", "quit"),
 	}, "  "))
-	return lipgloss.JoinVertical(lipgloss.Left, m.list.View(), help)
+
+	body := m.list.View()
+	if m.sidebarW > 0 {
+		body = lipgloss.JoinHorizontal(lipgloss.Top, m.renderSidebar(), body)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, body, help)
+}
+
+// renderSidebar draws the feed column with per-feed item counts, the active
+// filter highlighted. "All" sits at the top as the reset target.
+func (m model) renderSidebar() string {
+	st := m.styles
+	w := m.sidebarW - 3 // account for border + padding
+	lines := []string{st.sidebarTitle.Render("Feeds")}
+
+	total := len(m.allItems)
+	lines = append(lines, m.sidebarRow("All", total, m.feedFilter < 0, w))
+	for i, name := range m.feedNames {
+		lines = append(lines, m.sidebarRow(name, m.feedCount[name], i == m.feedFilter, w))
+	}
+
+	col := strings.Join(lines, "\n")
+	return st.sidebar.Height(m.height - 2).Render(col)
+}
+
+func (m model) sidebarRow(name string, count int, active bool, w int) string {
+	st := m.styles
+	cnt := fmt.Sprintf("%d", count)
+	label := truncate(name, w-len(cnt)-1)
+	pad := w - lipgloss.Width(label) - len(cnt)
+	if pad < 1 {
+		pad = 1
+	}
+	line := label + strings.Repeat(" ", pad) + cnt
+	if active {
+		return st.sidebarActive.Width(w).Render(line)
+	}
+	return st.sidebarItem.Render(label) + strings.Repeat(" ", pad) + st.sidebarCount.Render(cnt)
 }
 
 func (m model) readingView() string {
 	st := m.styles
 	pct := fmt.Sprintf("%3.0f%%", m.vp.ScrollPercent()*100)
 	footer := st.help.Render(
-		st.statusKey.Render("↑/↓") + " scroll  " +
-			st.statusKey.Render("o") + " browser  " +
-			st.statusKey.Render("esc") + " back  " +
-			st.statusKey.Render("q") + " quit  ") +
+		st.statusKey.Render("↑/↓")+" scroll  "+
+			st.statusKey.Render("o")+" browser  "+
+			st.statusKey.Render("esc")+" back  "+
+			st.statusKey.Render("q")+" quit  ") +
 		st.scrollPct.Render(pct)
 
 	return lipgloss.JoinVertical(lipgloss.Left, m.vp.View(), footer)

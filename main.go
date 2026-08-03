@@ -6,9 +6,13 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/tabwriter"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -128,9 +132,16 @@ func cmdRemove(args []string) {
 
 func cmdImport(args []string) {
 	if len(args) == 0 {
-		die(fmt.Errorf("usage: rss-readers import <file.opml>"))
+		die(fmt.Errorf("usage: rss-readers import <file.opml|url>"))
 	}
-	data, err := os.ReadFile(args[0])
+	src := args[0]
+	var data []byte
+	var err error
+	if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
+		data, err = fetchURL(src)
+	} else {
+		data, err = os.ReadFile(src)
+	}
 	if err != nil {
 		die(err)
 	}
@@ -165,6 +176,24 @@ func cmdExport(args []string) {
 	fmt.Printf("exported %d feeds to %s\n", len(cfg.Feeds), args[0])
 }
 
+func fetchURL(url string) ([]byte, error) {
+	client := &http.Client{Timeout: 20 * time.Second}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "rss-readers/1.0")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", url, resp.Status)
+	}
+	return io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+}
+
 func mustLoad() *config.Config {
 	cfg, err := config.Load()
 	if err != nil {
@@ -187,7 +216,7 @@ usage:
   rss-readers add <url> [name] [category]
   rss-readers rm <url-or-name>      unsubscribe
   rss-readers list                  print subscriptions
-  rss-readers import <file.opml>    import an OPML subscription list
+  rss-readers import <file|url>     import an OPML subscription list
   rss-readers export [file.opml]    export OPML (stdout if no file)
   rss-readers config                print the config file path
   rss-readers help                  show this help

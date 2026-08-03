@@ -6,6 +6,7 @@ package feed
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -18,6 +19,9 @@ import (
 	"github.com/shubhxho/rss-readers/internal/cache"
 	"github.com/shubhxho/rss-readers/internal/config"
 )
+
+// itemsKind is the cache blob namespace for parsed items.
+const itemsKind = "items.json"
 
 // Item is a single article, flattened from the parsed feed.
 type Item struct {
@@ -33,11 +37,11 @@ type Item struct {
 
 // Result is the outcome of fetching one feed.
 type Result struct {
-	Feed     config.Feed
-	Items    []Item
+	Feed      config.Feed
+	Items     []Item
 	FromCache bool
-	Err      error
-	Duration time.Duration
+	Err       error
+	Duration  time.Duration
 }
 
 // Fetcher fetches feeds with caching.
@@ -111,10 +115,16 @@ func (f *Fetcher) FetchAll(ctx context.Context, cfg *config.Config, onDone func(
 func (f *Fetcher) fetchOne(ctx context.Context, fd config.Feed) (items []Item, fromCache bool, err error) {
 	cached, hasCached := f.cache.Get(fd.URL)
 
-	// Serve straight from cache while still fresh — no network at all.
+	// Serve straight from cache while still fresh — no network at all. Reuse the
+	// parsed-items blob when present so we skip XML parsing entirely; a warm hit
+	// costs a single JSON unmarshal instead of a full feed detect + parse.
 	if hasCached && cached.Fresh(f.ttl) {
+		if items, ok := f.cachedItems(fd.URL); ok {
+			return items, true, nil
+		}
 		items, perr := f.parse(cached.Body, fd)
 		if perr == nil {
+			f.storeItems(fd.URL, items)
 			return items, true, nil
 		}
 		// Corrupt cache: fall through to a network fetch.
@@ -149,7 +159,13 @@ func (f *Fetcher) fetchOne(ctx context.Context, fd config.Feed) (items []Item, f
 
 	if resp.StatusCode == http.StatusNotModified && hasCached {
 		f.cache.Touch(fd.URL)
+		if items, ok := f.cachedItems(fd.URL); ok {
+			return items, true, nil
+		}
 		items, perr := f.parse(cached.Body, fd)
+		if perr == nil {
+			f.storeItems(fd.URL, items)
+		}
 		return items, true, perr
 	}
 
@@ -175,7 +191,30 @@ func (f *Fetcher) fetchOne(ctx context.Context, fd config.Feed) (items []Item, f
 	})
 
 	items, err = f.parse(body, fd)
+	if err == nil {
+		f.storeItems(fd.URL, items)
+	}
 	return items, false, err
+}
+
+// cachedItems returns the parsed items blob for url when present.
+func (f *Fetcher) cachedItems(url string) ([]Item, bool) {
+	data, ok := f.cache.GetBlob(url, itemsKind)
+	if !ok {
+		return nil, false
+	}
+	var items []Item
+	if err := json.Unmarshal(data, &items); err != nil {
+		return nil, false
+	}
+	return items, true
+}
+
+// storeItems persists parsed items so future warm reads skip XML parsing.
+func (f *Fetcher) storeItems(url string, items []Item) {
+	if data, err := json.Marshal(items); err == nil {
+		_ = f.cache.PutBlob(url, itemsKind, data)
+	}
 }
 
 func (f *Fetcher) parse(body []byte, fd config.Feed) ([]Item, error) {

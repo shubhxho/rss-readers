@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>rss-readers subscriptions</title>
+  </head>
+  <body>
+    <outline text="Go" title="Go">
+      <outline text="Dave Cheney" title="Dave Cheney" type="rss" xmlUrl="https://dave.cheney.net/feed" category="Go"></outline>
+      <outline text="Go Blog" title="Go Blog" type="rss" xmlUrl="https://go.dev/blog/feed.atom" category="Go"></outline>
+    </outline>
+    <outline text="Programming" title="Programming">
+      <outline text="Julia Evans" title="Julia Evans" type="rss" xmlUrl="https://jvns.ca/atom.xml" category="Programming"></outline>
+      <outline text="Simon Willison" title="Simon Willison" type="rss" xmlUrl="https://simonwillison.net/atom/everything/" category="Programming"></outline>
+    </outline>
+    <outline text="Science" title="Science">
+      <outline text="NASA Breaking News" title="NASA Breaking News" type="rss" xmlUrl="https://www.nasa.gov/feed/" category="Science"></outline>
+    </outline>
+    <outline text="Tech" title="Tech">
+      <outline text="Ars Technica" title="Ars Technica" type="rss" xmlUrl="https://feeds.arstechnica.com/arstechnica/index" category="Tech"></outline>
+      <outline text="Hacker News" title="Hacker News" type="rss" xmlUrl="https://hnrss.org/frontpage" category="Tech"></outline>
+      <outline text="Lobsters" title="Lobsters" type="rss" xmlUrl="https://lobste.rs/rss" category="Tech"></outline>
+      <outline text="The Verge" title="The Verge" type="rss" xmlUrl="https://www.theverge.com/rss/index.xml" category="Tech"></outline>
+    </outline>
+  </body>
+</opml>
