@@ -1,10 +1,9 @@
 package feed
 
 import (
+	"sync"
 	"testing"
 	"time"
-
-	"github.com/mmcdole/gofeed"
 
 	"github.com/shubhxho/rss-readers/internal/config"
 )
@@ -27,7 +26,7 @@ const rssSample = `<?xml version="1.0"?>
 </rss>`
 
 func TestParse(t *testing.T) {
-	f := &Fetcher{parser: gofeed.NewParser()}
+	f := newTestFetcher(t, time.Hour)
 	fd := config.Feed{Name: "Test", Category: "Cat"}
 	items, err := f.parse([]byte(rssSample), fd)
 	if err != nil {
@@ -42,6 +41,24 @@ func TestParse(t *testing.T) {
 	if items[0].Published.IsZero() {
 		t.Fatal("first item should have a parsed date")
 	}
+}
+
+func TestParseConcurrent(t *testing.T) {
+	// Exercises the parser pool under contention; run with -race.
+	f := newTestFetcher(t, time.Hour)
+	fd := config.Feed{Name: "Test"}
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			items, err := f.parse([]byte(rssSample), fd)
+			if err != nil || len(items) != 2 {
+				t.Errorf("concurrent parse: items=%d err=%v", len(items), err)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func TestMergeSortsNewestFirst(t *testing.T) {

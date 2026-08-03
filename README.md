@@ -54,10 +54,11 @@ rss-readers help                         show help
 | key       | action              | key         | action           |
 |-----------|---------------------|-------------|------------------|
 | `↑/k ↓/j` | move                | `enter`     | read article     |
-| `tab`     | next feed filter    | `shift+tab` | previous feed    |
-| `/`       | fuzzy search        | `o`         | open in browser  |
-| `r`       | refresh             | `?`         | toggle help      |
-| `esc`     | back                | `q`         | quit             |
+| `g / G`   | top / bottom        | `tab`       | next feed filter |
+| `shift+tab` | previous feed     | `/`         | fuzzy search     |
+| `o`       | open in browser     | `r`         | refresh          |
+| `?`       | toggle help         | `esc`       | back             |
+| `q`       | quit                |             |                  |
 
 ### Managing feeds
 

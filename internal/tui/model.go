@@ -89,10 +89,12 @@ type model struct {
 	feedNames  []string               // unique feed names, for the tab filter
 	feedFilter int                    // active feed filter index; -1 == all
 
-	current  feed.Item // article being read
-	err      error
-	ready    bool
-	showHelp bool
+	current     feed.Item // article being read
+	err         error
+	ready       bool
+	showHelp    bool
+	lastRefresh time.Time
+	failed      int
 }
 
 // New constructs the root model.
@@ -190,6 +192,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case fetchDoneMsg:
 		m.results = msg.results
+		m.lastRefresh = time.Now()
 		m.rebuildList()
 		if m.state == stateFetching {
 			m.state = stateList
@@ -254,6 +257,30 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, keys.PrevFeed):
 		if m.state == stateList {
 			m.cycleFeed(-1)
+			return m, nil
+		}
+
+	case key.Matches(msg, keys.Top):
+		switch m.state {
+		case stateList:
+			if len(m.list.Items()) > 0 {
+				m.list.Select(0)
+			}
+			return m, nil
+		case stateReading:
+			m.vp.GotoTop()
+			return m, nil
+		}
+
+	case key.Matches(msg, keys.Bottom):
+		switch m.state {
+		case stateList:
+			if n := len(m.list.Items()); n > 0 {
+				m.list.Select(n - 1)
+			}
+			return m, nil
+		case stateReading:
+			m.vp.GotoBottom()
 			return m, nil
 		}
 
@@ -377,6 +404,7 @@ func (m *model) rebuildList() {
 			ok++
 		}
 	}
+	m.failed = failed
 	m.applyFeedFilter()
 	m.list.NewStatusMessage(fmt.Sprintf("%d fetched · %d cached · %d failed", ok, cached, failed))
 }

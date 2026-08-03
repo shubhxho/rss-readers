@@ -126,7 +126,7 @@ func (m model) fetchResultLine(r feed.Result) string {
 func (m model) listView() string {
 	st := m.styles
 	kv := func(k, v string) string { return st.statusKey.Render(k) + " " + v }
-	help := st.help.Render(strings.Join([]string{
+	hints := st.help.Render(strings.Join([]string{
 		kv("enter", "read"),
 		kv("tab", "feed"),
 		kv("/", "search"),
@@ -136,11 +136,29 @@ func (m model) listView() string {
 		kv("q", "quit"),
 	}, "  "))
 
+	// Right-align a freshness stamp on the footer.
+	footer := hints
+	if !m.lastRefresh.IsZero() {
+		stamp := st.dim.Render("updated " + humanize(m.lastRefresh))
+		gap := m.width - lipgloss.Width(hints) - lipgloss.Width(stamp) - 2
+		if gap > 1 {
+			footer = hints + strings.Repeat(" ", gap) + stamp
+		}
+	}
+
 	body := m.list.View()
+	if len(m.allItems) == 0 {
+		msg := "No articles yet."
+		if m.failed > 0 {
+			msg = fmt.Sprintf("All %d feeds failed — check your network or edit ~/.config/rss-readers/config.toml", m.failed)
+		}
+		body = lipgloss.Place(lipgloss.Width(body), m.height-2,
+			lipgloss.Center, lipgloss.Center, st.dim.Render(msg))
+	}
 	if m.sidebarW > 0 {
 		body = lipgloss.JoinHorizontal(lipgloss.Top, m.renderSidebar(), body)
 	}
-	return lipgloss.JoinVertical(lipgloss.Left, body, help)
+	return lipgloss.JoinVertical(lipgloss.Left, body, footer)
 }
 
 // renderSidebar draws the feed column with per-feed item counts, the active
@@ -188,12 +206,20 @@ func (m model) readingView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.vp.View(), footer)
 }
 
-// renderArticle builds the scrollable reader content for one item.
+// renderArticle builds the scrollable reader content for one item. Body text is
+// capped to a comfortable reading measure and centered in the viewport rather
+// than stretched edge-to-edge, which is far easier to read on wide terminals.
 func (m model) renderArticle(it feed.Item) string {
 	st := m.styles
-	w := m.vp.Width
-	if w <= 0 {
-		w = m.width - 2
+	vw := m.vp.Width
+	if vw <= 0 {
+		vw = m.width - 2
+	}
+	// Reading measure: ~72–90 columns is the readable sweet spot.
+	w := min(vw, 90)
+	indent := (vw - w) / 2
+	if indent < 0 {
+		indent = 0
 	}
 
 	title := st.readTitle.Width(w).Render(it.Title)
@@ -210,7 +236,7 @@ func (m model) renderArticle(it feed.Item) string {
 		metaLine += "  " + st.category.Render(it.Category)
 	}
 
-	link := st.dim.Render(it.Link)
+	link := st.readLink.Render(it.Link)
 
 	raw := it.Content
 	if strings.TrimSpace(raw) == "" {
@@ -222,9 +248,9 @@ func (m model) renderArticle(it feed.Item) string {
 	}
 	bodyBlock := st.readBody.Width(w).Render(body)
 
-	divider := st.dim.Render(strings.Repeat("─", min(w, 60)))
+	divider := st.dim.Render(strings.Repeat("─", min(w, 72)))
 
-	return lipgloss.JoinVertical(lipgloss.Left,
+	block := lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		metaLine,
 		link,
@@ -232,6 +258,10 @@ func (m model) renderArticle(it feed.Item) string {
 		"",
 		bodyBlock,
 	)
+	if indent > 0 {
+		block = lipgloss.NewStyle().MarginLeft(indent).Render(block)
+	}
+	return block
 }
 
 func truncate(s string, n int) string {

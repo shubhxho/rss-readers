@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -49,17 +50,19 @@ type Fetcher struct {
 	client *http.Client
 	cache  *cache.Cache
 	ttl    time.Duration
-	parser *gofeed.Parser
+	// parsers pools gofeed parsers: a single parser is not safe for concurrent
+	// use, and FetchAll parses on many goroutines at once.
+	parsers sync.Pool
 }
 
 // New builds a Fetcher. ttl is how long a cached body stays fresh before a
 // conditional revalidation request is made.
 func New(c *cache.Cache, ttl time.Duration) *Fetcher {
 	return &Fetcher{
-		client: &http.Client{Timeout: 20 * time.Second},
-		cache:  c,
-		ttl:    ttl,
-		parser: gofeed.NewParser(),
+		client:  &http.Client{Timeout: 20 * time.Second},
+		cache:   c,
+		ttl:     ttl,
+		parsers: sync.Pool{New: func() any { return gofeed.NewParser() }},
 	}
 }
 
@@ -218,7 +221,10 @@ func (f *Fetcher) storeItems(url string, items []Item) {
 }
 
 func (f *Fetcher) parse(body []byte, fd config.Feed) ([]Item, error) {
-	parsed, err := f.parser.ParseString(string(body))
+	parser := f.parsers.Get().(*gofeed.Parser)
+	defer f.parsers.Put(parser)
+
+	parsed, err := parser.ParseString(string(body))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fd.Name, err)
 	}

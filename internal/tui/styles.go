@@ -34,6 +34,7 @@ type styles struct {
 	readTitle lipgloss.Style
 	readMeta  lipgloss.Style
 	readBody  lipgloss.Style
+	readLink  lipgloss.Style
 	help      lipgloss.Style
 	scrollPct lipgloss.Style
 
@@ -69,6 +70,7 @@ func newStyles() styles {
 		readTitle: lipgloss.NewStyle().Bold(true).Foreground(colPurple).MarginBottom(1),
 		readMeta:  lipgloss.NewStyle().Foreground(colCyan),
 		readBody:  lipgloss.NewStyle().Foreground(colText),
+		readLink:  lipgloss.NewStyle().Foreground(colCyan).Underline(true),
 		help:      lipgloss.NewStyle().Foreground(colSubtle),
 		scrollPct: lipgloss.NewStyle().Foreground(colMuted),
 

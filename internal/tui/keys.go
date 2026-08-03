@@ -11,6 +11,8 @@ type keyMap struct {
 	Refresh  key.Binding
 	NextFeed key.Binding
 	PrevFeed key.Binding
+	Top      key.Binding
+	Bottom   key.Binding
 	Help     key.Binding
 	Quit     key.Binding
 }
@@ -24,6 +26,8 @@ var keys = keyMap{
 	Refresh:  key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "refresh")),
 	NextFeed: key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next feed")),
 	PrevFeed: key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "prev feed")),
+	Top:      key.NewBinding(key.WithKeys("g", "home"), key.WithHelp("g", "top")),
+	Bottom:   key.NewBinding(key.WithKeys("G", "end"), key.WithHelp("G", "bottom")),
 	Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 	Quit:     key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
 }
